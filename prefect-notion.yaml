@@ -1,0 +1,147 @@
+# Welcome to your prefect.yaml file! You can use this file for storing and managing
+# configuration for deploying your flows. We recommend committing this file to source
+# control along with your flow code.
+
+# Generic metadata about this project
+name: australia-engine-cloud
+prefect-version: 3.0.2
+
+# build section allows you to manage and build docker images
+build:
+- prefect_docker.deployments.steps.build_docker_image:
+    id: build_image
+    requires: prefect-docker>=0.3.1
+    image_name:  341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect
+    tag: notion
+    dockerfile: ./Dockerfile_notion
+
+
+# push section allows you to manage if and how this project is uploaded to remote locations
+push:
+- prefect_docker.deployments.steps.push_docker_image:
+    requires: prefect-docker>=0.3.1
+    image_name: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect
+    tag: notion
+
+
+deployments:
+- name: sync-notion-for-connection-deploy
+  version: latest
+  tags: []
+  description: null
+  schedule: {}
+  entrypoint: notion_helper.py:run_notion_sync_for_connection_flow
+  parameters: {}
+  work_pool:
+    name: notion-ingestion-pool
+    job_variables:
+      image: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect:notion
+
+- name: sync-confluence-deploy
+  version: latest
+  tags: []
+  description: null
+  schedule: {}
+  entrypoint: confluence_helper.py:update_confluence_flow
+  parameters: {}
+  work_pool:
+    name: notion-ingestion-pool
+    job_variables:
+      image: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect:notion
+
+- name: sync-discord-deploy
+  version: latest
+  tags: []
+  description: null
+  schedule: {}
+  entrypoint: discord_helper.py:run_discord_pipeline_flow
+  parameters: {}
+  work_pool:
+    name: discord-ingestion-pool
+    job_variables:
+      image: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect:notion
+
+
+- name: auto-sync-discord-deploy
+  version: latest
+  tags: []
+  description: null
+  schedule: {}
+  entrypoint: discord_helper.py:run_discord_sync
+  parameters: {}
+  work_pool:
+    name: discord-ingestion-pool
+    job_variables:
+      image: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect:notion
+
+- name: auto-sync-slack-deploy
+  version: latest
+  tags: []
+  description: null
+  schedule: {}
+  entrypoint: slack_helper.py:sync_slack_records
+  parameters: {}
+  work_pool:
+    name: discord-ingestion-pool
+    job_variables:
+      image: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect:notion
+
+- name: zendesk-sync-deploy
+  version: latest
+  tags: []
+  description: null
+  schedule: {}
+  entrypoint: zendesk_helper.py:upload_zendesk_tickets_flow
+  parameters: {}
+  work_pool:
+    name: zendesk-ingestion-pool
+    job_variables:
+      image: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect:notion
+  
+- name: zendesk-update-deploy
+  version: latest
+  tags: []
+  description: null
+  schedule: {}
+  entrypoint: zendesk_helper.py:update_zendesk_flow
+  parameters: {}
+  work_pool:
+    name: zendesk-ingestion-pool
+    job_variables:
+      image: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect:notion
+        
+- name: conversation-update-deploy
+  version: latest
+  tags: []
+  description: null
+  schedule: {}
+  entrypoint: analytics_helper.py:run_conversation_update_flow
+  parameters: {}
+  work_pool:
+    name: notion-ingestion-pool
+    job_variables:
+      image: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect:notion
+
+- name: sync-notion-deploy
+  version: latest
+  tags: []
+  description: null
+  schedule: {}
+  entrypoint: notion_helper.py:run_full_notion_sync_flow
+  parameters: {}
+  work_pool:
+    name: notion-ingestion-pool
+    job_variables:
+      image: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect:notion
+  
+- name: zendesk-initial-upload-deploy
+  version: latest
+  tags: []
+  description: null
+  schedule: {}
+  entrypoint: zendesk_helper.py:run_initial_zendesk_upload_flow
+  parameters: {}
+  work_pool:
+    name: zendesk-ingestion-pool
+    job_variables:
+      image: 341276247769.dkr.ecr.us-west-1.amazonaws.com/prefect:notion
