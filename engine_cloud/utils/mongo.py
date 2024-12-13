@@ -8,7 +8,7 @@ import toolz
 from fastapi.encoders import jsonable_encoder
 from pymongo import DeleteOne, InsertOne, MongoClient, UpdateOne
 
-from config import settings
+from engine_cloud.config import settings
 
 
 class RecordFormat(Enum):
@@ -207,6 +207,17 @@ def delete_mongodb_records_by_metadata(input: MongoRecordMetadataQueryInput) -> 
         count = 0
 
     return count
+
+
+def delete_mongodb_records_by_id(record_ids: T.List[str]) -> int:
+    client = get_mongo_client()
+    db = client.newcastle
+    result = db["records"].delete_many({"record_id": {"$in": record_ids}})
+    if result.deleted_count:
+        print(f"deleted {result.deleted_count} records")
+    else:
+        print("no records deleted")
+    return result.deleted_count
 
 
 def delete_mongodb_records_by_index_name(index_name: str) -> int:

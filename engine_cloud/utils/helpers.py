@@ -11,11 +11,8 @@ from typing import Union
 from pydantic import BaseModel
 
 from urllib.parse import urlparse
-from management_helpers import (
-    get_sources_for_project,
+from engine_cloud.gql.management_helpers import (
     get_project_source_map_for_org,
-    get_sources_for_org,
-    get_project_ids_for_source,
     get_sources_with_project_ids,
 )
 

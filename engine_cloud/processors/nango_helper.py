@@ -2,7 +2,7 @@ import json
 import requests
 import backoff
 
-from config import settings
+from engine_cloud.config import settings
 
 
 @backoff.on_exception(backoff.expo, Exception, max_time=60, max_tries=5)

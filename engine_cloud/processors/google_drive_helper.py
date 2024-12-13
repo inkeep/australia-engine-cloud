@@ -5,12 +5,12 @@ from io import BytesIO
 import os
 import tempfile
 
-from config import settings
-from nango_helper import (
+from engine_cloud.config import settings
+from engine_cloud.processors.nango_helper import (
     get_nango_access_refresh_tokens,
     get_nango_connection_metadata,
 )
-from reducto_helper import (
+from engine_cloud.processors.reducto_helper import (
     upload_folder,
     convert_and_upload_reducto_results,
 )

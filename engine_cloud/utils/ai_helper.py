@@ -1,6 +1,6 @@
 import anthropic
 import time
-from config import settings
+from engine_cloud.config import settings
 
 
 def make_ticket_selection_prompt(ticket_content, org, description):

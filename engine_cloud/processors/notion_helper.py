@@ -3,20 +3,20 @@ import requests
 import backoff
 from prefect import task, flow
 from prefect.deployments import run_deployment
-from config import settings
-from helpers import get_content_hash, get_url_from_md
-from management_helpers import (
+from engine_cloud.config import settings
+from engine_cloud.utils.helpers import get_content_hash, get_url_from_md
+from engine_cloud.gql.management_helpers import (
     create_source_sync_and_indexing_jobs,
     get_source,
 )
-from mongo import (
+from engine_cloud.utils.mongo import (
     delete_mongodb_records_by_metadata,
     MongoRecordMetadataQueryInput,
     upload_batches,
 )
-from nango_helper import get_nango_connection_ids_by_type, get_nango_key
-from helpers import get_org_configs
-from main import create_index_mapping, ping_source_sync_indexer
+from engine_cloud.processors.nango_helper import get_nango_connection_ids_by_type, get_nango_key
+from engine_cloud.utils.helpers import get_org_configs
+from engine_cloud.processors.main import create_index_mapping, ping_source_sync_indexer
 
 
 # def get_notion_source(org_alias, connection_id):

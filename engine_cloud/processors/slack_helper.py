@@ -6,14 +6,19 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from prefect import flow, task
-from config import settings
+from engine_cloud.config import settings
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
-from mongo import upload_batches, delete_mongodb_records_by_index_name
-from helpers import get_org_configs
-from main import create_index_mapping
-from notion_helper import trigger_auto_index_deploy
-from management_helpers import create_source_sync_and_indexing_jobs
+from engine_cloud.utils.mongo import (
+    upload_batches,
+    delete_mongodb_records_by_index_name,
+    get_mongo_records_by_index_name,
+    delete_mongodb_records_by_id,
+)
+from engine_cloud.utils.helpers import get_org_configs
+from engine_cloud.processors.main import create_index_mapping
+from engine_cloud.processors.notion_helper import trigger_auto_index_deploy
+from engine_cloud.gql.management_helpers import create_source_sync_and_indexing_jobs
 
 SLACK_TOKEN_MAPPING = {
     "devmarketing": settings.SLACK_DEVMARKETING_KEY,
@@ -142,14 +147,14 @@ def get_channel_threads(channel_id, slack_token):
     threads = []
 
     next_cursor = None
+    oldest = datetime(2021, 1, 1).timestamp()
     while True:
         try:
             result = client.conversations_history(
-                channel=channel_id, cursor=next_cursor
+                channel=channel_id, cursor=next_cursor, oldest=oldest
             )
-            print(result)
             messages = result["messages"]
-            print(len(messages))
+            print(f"len(messages) = {len(messages)}")
             for msg in messages:
                 if "thread_ts" in msg and msg["thread_ts"] == msg["ts"]:
                     thread_result = client.conversations_replies(
@@ -414,10 +419,10 @@ def upload_slack_index(
     project_id = config["input"].project_ids[0]
     team_name = get_team_name(team_id, slack_token=slack_token)
     print(f"team_name = {team_name}")
-    root_url = get_root_url(channel_ids[0], slack_token=slack_token)
     user_list = get_user_list(team_id, slack_token=slack_token)
     channel_mapping = get_channel_ids_names(team_id, slack_token)
     channel_ids = set(channel_mapping.keys()) | set(channel_ids)
+    root_url = get_root_url(list(channel_ids)[0], slack_token=slack_token)
     print(f"channel_mapping = {channel_mapping}")
     for id, name in channel_mapping.items():
         print("processing channel: ", id)
@@ -432,13 +437,55 @@ def upload_slack_index(
     upload_batches(records, index_name, source_id, org_alias, project_id)
 
 
+@task(name="update_slack_index")
+def update_slack_index(config, slack_token):
+    current_records = get_mongo_records_by_index_name(config["base_index_name"])
+    index_name = config["base_index_name"]
+    channel_ids = config["input"].slack_info.channel_ids
+    team_id = config["input"].slack_info.team_id
+    source_id = config["input"].source_id
+    org_alias = config["input"].org_alias
+    project_id = config["input"].project_ids[0]
+    team_name = get_team_name(team_id, slack_token=slack_token)
+    print(f"team_name = {team_name}")
+    user_list = get_user_list(team_id, slack_token=slack_token)
+    channel_mapping = get_channel_ids_names(team_id, slack_token)
+    channel_ids = set(channel_mapping.keys()) | set(channel_ids)
+    root_url = get_root_url(list(channel_ids)[0], slack_token=slack_token)
+    print(f"channel_mapping = {channel_mapping}")
+    records = []
+    for id, name in channel_mapping.items():
+        print("processing channel: ", id)
+
+        threads = get_channel_threads(id, slack_token=slack_token)
+        print(f"number of threads = {len(threads)}, creating records")
+        records += prepare_thread_records(
+            threads, id, root_url, user_list, team_name, team_id, name
+        )
+        print(f"channel: {id} added to records")
+    record_id_map = {record["record_id"]: record for record in current_records}
+    current_record_id_map = {record["record_id"]: record for record in records}
+    deleted_ids = []
+    updated_ids = []
+    for record_id in current_record_id_map:
+        if record_id not in record_id_map:
+            deleted_ids.append(record_id)
+        else:
+            updated_ids.append(record_id)
+    updated_records = [record_id_map[record_id] for record_id in updated_ids]
+
+    print(f"deleted_ids = {deleted_ids}")
+    print(f"updated_ids = {updated_ids}")
+    delete_mongodb_records_by_id(deleted_ids)
+    upload_batches(updated_records, index_name, source_id, org_alias, project_id)
+
+
 @flow(name="sync_slack_records_flow")
 def sync_slack_records():
     orgs = ["devmarketing", "skyflow", "deliverlogic", "tossim", "deephavenio"]
     for org in orgs:
         configs = get_org_configs(org)
         for config in configs["slack"]:
-            slack_info = config["input"].slack_info
             delete_mongodb_records_by_index_name(config["base_index_name"])
             if config["input"].source_id == "cm4k39a8c00a35er4oxu2vz73":
                 slack_token = SLACK_TOKEN_MAPPING["deephavenio_internal"]
@@ -456,18 +503,19 @@ def sync_slack_records():
             )
         trigger_auto_index_deploy(org, create_index_mapping(org, configs))
 
-    # if __name__ == "__main__":
-    # configs = get_org_configs("deephavenio", map_source_ids=True)
-    # config = configs["cm4k39a8c00a35er4oxu2vz73"][0]
 
+if __name__ == "__main__":
+    configs = get_org_configs("deephavenio", map_source_ids=True)
+    config = configs["cm4k39a8c00a35er4oxu2vz73"][0]
 
-#     # channel = get_channel(
-#     #     config["input"].slack_info.channel_ids[0], SLACK_TOKEN_MAPPING["tossim"]
-#     # )
-#     # print(f"channel_mapping = {channel}")
-# channel_map = get_channel_ids_names(
-#     config["input"].slack_info.team_id, SLACK_TOKEN_MAPPING["deephavenio_internal"]
-# )
+    # channel = get_channel(
+    #     config["input"].slack_info.channel_ids[0],
+    #     SLACK_TOKEN_MAPPING["deephavenio_internal"],
+    # )
+    channel_map = get_channel_ids_names(
+        config["input"].slack_info.team_id, SLACK_TOKEN_MAPPING["deephavenio_internal"]
+    )
+    print(f"channel_map = {channel_map}")
 
 #     slack_token = SLACK_TOKEN_MAPPING["deephavenio_internal"]
 #     slack_info = config["input"].slack_info

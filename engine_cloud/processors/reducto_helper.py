@@ -3,10 +3,10 @@ import json
 import os
 import tempfile
 import backoff
-from config import settings
+from engine_cloud.config import settings
 import html2text
-from helpers import get_content_hash, get_num_tokens
-from mongo import upload_batches
+from engine_cloud.utils.helpers import get_content_hash, get_num_tokens
+from engine_cloud.utils.mongo import upload_batches
 
 
 def parse_document_from_url(document_url: str):

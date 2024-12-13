@@ -2,14 +2,14 @@ from supabase import create_client, Client
 import json
 from prefect import flow, task
 
-from config import settings
-from mongo import (
+from engine_cloud.config import settings
+from engine_cloud.utils.mongo import (
     upload_batches,
     delete_mongodb_records_by_index_name,
 )
-from helpers import get_content_hash, get_num_tokens, get_org_configs
-from main import trigger_auto_index_deploy
-from management_helpers import create_source_sync_and_indexing_jobs
+from engine_cloud.utils.helpers import get_content_hash, get_num_tokens, get_org_configs
+from engine_cloud.processors.main import trigger_auto_index_deploy
+from engine_cloud.gql.management_helpers import create_source_sync_and_indexing_jobs
 
 
 def get_page_count(client, org_id, table_name):

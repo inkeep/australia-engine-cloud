@@ -3,7 +3,7 @@ from datetime import datetime
 from gql import Client, gql
 from gql.transport.requests import RequestsHTTPTransport
 
-from config import settings
+from engine_cloud.config import settings
 
 
 def get_inkeep_graphql_client(organization_id=None, organization_alias=None):

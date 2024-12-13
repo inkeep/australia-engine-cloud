@@ -4,7 +4,7 @@ import re
 import typing as T
 from datetime import datetime
 
-from helpers import get_num_tokens, get_content_hash
+from engine_cloud.utils.helpers import get_num_tokens, get_content_hash
 
 
 MAX_TOKENS = 6144

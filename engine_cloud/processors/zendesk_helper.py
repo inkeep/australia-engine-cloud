@@ -10,24 +10,24 @@ import multiprocessing
 from multiprocessing import Pool, Manager
 import time
 from concurrent.futures import ThreadPoolExecutor
-from nango_helper import (
+from engine_cloud.processors.nango_helper import (
     get_nango_key,
     get_nango_connection_ids_by_type,
     get_zendesk_subdomain,
 )
-from helpers import get_content_hash
+from engine_cloud.utils.helpers import get_content_hash
 
-from mongo import (
+from engine_cloud.utils.mongo import (
     upload_batches,
     get_mongo_records_by_index_name,
     delete_mongodb_records_by_id,
 )
-from management_helpers import (
+from engine_cloud.gql.management_helpers import (
     create_source_sync_and_indexing_jobs,
     get_source,
 )
-from notion_helper import trigger_auto_index_deploy
-from main import get_org_configs, create_index_mapping
+from engine_cloud.processors.notion_helper import trigger_auto_index_deploy
+from engine_cloud.processors.main import get_org_configs, create_index_mapping
 
 THREE_YEARS_TIMESTAMP = datetime.now(timezone.utc) - timedelta(days=365 * 3)
 

@@ -19,8 +19,8 @@ from prefect.docker import DockerImage
 from prefect.deployments import run_deployment
 
 
-from config import settings
-from helpers import (
+from engine_cloud.config import settings
+from engine_cloud.utils.helpers import (
     get_content_hash,
     remove_indentation,
     get_owner_repo_from_github_url,
@@ -34,7 +34,7 @@ from helpers import (
     CustomHTML2Text,
     CreateIndexInput,
 )
-from mongo import (
+from engine_cloud.utils.mongo import (
     delete_mongodb_records_by_metadata,
     get_mongo_records_by_metadata,
     upload_batches,
@@ -42,8 +42,8 @@ from mongo import (
     IndexingEngine,
 )
 
-from page_graph import create_graph_records
-from management_helpers import (
+from engine_cloud.utils.page_graph import create_graph_records
+from engine_cloud.gql.management_helpers import (
     get_sources_for_org,
     get_active_orgs,
     get_most_recent_sync_time,

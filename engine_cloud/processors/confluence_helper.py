@@ -3,17 +3,17 @@ import requests
 from datetime import datetime, timezone
 from prefect import flow, task
 from requests.auth import HTTPBasicAuth
-from config import settings
-from mongo import (
+from engine_cloud.config import settings
+from engine_cloud.utils.mongo import (
     upload_batches,
     delete_mongodb_records_by_index_name,
 )
-from md_helper import convert_html_to_md
-from helpers import get_content_hash
-from management_helpers import (
+from engine_cloud.processors.md_helper import convert_html_to_md
+from engine_cloud.utils.helpers import get_content_hash
+from engine_cloud.gql.management_helpers import (
     create_source_sync_and_indexing_jobs,
 )
-from notion_helper import trigger_auto_index_deploy
+from engine_cloud.processors.notion_helper import trigger_auto_index_deploy
 
 
 def get_all_pages(pages_url, base_url):

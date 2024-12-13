@@ -9,18 +9,18 @@ import discord
 from discord.ext import commands
 from prefect import flow, task
 
-from config import settings
-from helpers import get_content_hash
-from mongo import upload_batches, delete_mongodb_records_by_index_name
-from helpers import get_org_configs, CreateIndexInput
-from management_helpers import (
+from engine_cloud.config import settings
+from engine_cloud.utils.helpers import get_content_hash
+from engine_cloud.utils.mongo import upload_batches, delete_mongodb_records_by_index_name
+from engine_cloud.utils.helpers import get_org_configs, CreateIndexInput
+from engine_cloud.gql.management_helpers import (
     get_all_sources_of_type,
     create_source_sync_and_indexing_jobs,
     get_source_sync_job_mapping,
     update_all_indexing_jobs,
 )
-from notion_helper import trigger_auto_index_deploy
-from main import trigger_manual_index_deploy, create_index_mapping
+from engine_cloud.processors.notion_helper import trigger_auto_index_deploy
+from engine_cloud.processors.main import trigger_manual_index_deploy, create_index_mapping
 
 
 intents = discord.Intents.default()
