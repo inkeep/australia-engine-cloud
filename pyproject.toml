@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "github-test"
+name = "engine_cloud"
 version = "0.1.0"
 description = ""
 authors = ["miles-kt-inkeep <miles@inkeep.com>"]
 readme = "README.md"
-packages = [{include = "github"}]
+packages = [{include = "engine_cloud"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
