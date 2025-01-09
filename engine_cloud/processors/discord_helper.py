@@ -1,4 +1,5 @@
 import asyncio
+import backoff
 import json
 import re
 import traceback
@@ -11,7 +12,10 @@ from prefect import flow, task
 
 from engine_cloud.config import settings
 from engine_cloud.utils.helpers import get_content_hash
-from engine_cloud.utils.mongo import upload_batches, delete_mongodb_records_by_index_name
+from engine_cloud.utils.mongo import (
+    upload_batches,
+    delete_mongodb_records_by_index_name,
+)
 from engine_cloud.utils.helpers import get_org_configs, CreateIndexInput
 from engine_cloud.gql.management_helpers import (
     get_all_sources_of_type,
@@ -20,7 +24,10 @@ from engine_cloud.gql.management_helpers import (
     update_all_indexing_jobs,
 )
 from engine_cloud.processors.notion_helper import trigger_auto_index_deploy
-from engine_cloud.processors.main import trigger_manual_index_deploy, create_index_mapping
+from engine_cloud.processors.main import (
+    trigger_manual_index_deploy,
+    create_index_mapping,
+)
 
 
 intents = discord.Intents.default()
@@ -127,9 +134,8 @@ def get_forum_record_id(messages, thread_data):
     return get_content_hash(thread_data["name"] + message_content)
 
 
-@task(name="create_forum_records_tasks")
-async def create_forum_records(channel):
-    records = []
+@backoff.on_exception(backoff.expo, Exception, max_time=60, max_tries=5)
+async def get_all_threads(channel):
     try:
         archived_threads = channel.archived_threads(limit=10000)
         all_threads = []
@@ -141,37 +147,47 @@ async def create_forum_records(channel):
         print(e)
         return []
 
+
+@backoff.on_exception(backoff.expo, Exception, max_time=60, max_tries=5)
+async def construct_messages_from_thread(thread):
+    thread_data = get_forum_thread_data(thread)
+    construct_messages = []
+    messages = thread.history(limit=None, oldest_first=True)
+    async for message in messages:
+        author_roles = []
+        if isinstance(message.author, discord.Member):
+            author_roles: T.List[str] = [role.name for role in message.author.roles]
+        message_data = get_message_data(message, author_roles)
+        construct_messages.append(message_data)
+
+    for tag in thread.applied_tags:
+        if tag.id == "1260363959006007329":
+            continue
+
+    record_id = get_forum_record_id(construct_messages, thread_data)
+
+    return {
+        "record_id": record_id,
+        "content": "",
+        "url": "",
+        "title": "",
+        "attributes": {
+            "channel_type": "forum",
+            "thread": json.dumps(thread_data),
+            "history": json.dumps(construct_messages),
+        },
+        "extra_attributes": {},
+    }
+
+
+@task(name="create_forum_records_tasks")
+async def create_forum_records(channel):
+    records = []
+    all_threads = await get_all_threads(channel)
+
     thread: discord.Thread
     for i, thread in enumerate(all_threads):
-        thread_data = get_forum_thread_data(thread)
-        construct_messages = []
-        messages = thread.history(limit=None, oldest_first=True)
-        async for message in messages:
-            author_roles = []
-            if isinstance(message.author, discord.Member):
-                author_roles: T.List[str] = [role.name for role in message.author.roles]
-            message_data = get_message_data(message, author_roles)
-            construct_messages.append(message_data)
-
-        for tag in thread.applied_tags:
-            if tag.id == "1260363959006007329":
-                continue
-
-        record_id = get_forum_record_id(construct_messages, thread_data)
-        records.append(
-            {
-                "record_id": record_id,
-                "content": "",
-                "url": "",
-                "title": "",
-                "attributes": {
-                    "channel_type": "forum",
-                    "thread": json.dumps(thread_data),
-                    "history": json.dumps(construct_messages),
-                },
-                "extra_attributes": {},
-            }
-        )
+        records.append(await construct_messages_from_thread(thread))
     print(f"found {len(records)} records")
     return records
 
